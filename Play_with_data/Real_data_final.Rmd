@@ -1,0 +1,82 @@
+---
+title: "Working with real data"
+author: "Nils Eling"
+date: "19 October 2016"
+output:
+  slidy_presentation:
+    highlight: pygments
+  html_document:
+    css: custom.css
+    highlight: pygments
+    toc: yes
+  beamer_presentation:
+    highlight: pygments
+    keep_tex: yes
+    latex_engine: xelatex
+    toc: yes
+fontsize: 10pt
+---
+
+#Useful libraries
+```{r, warning=FALSE, message=FALSE, eval=FALSE}
+library(DESeq2)
+library(plot3Drgl)
+library(ggplot2)
+```
+
+#Single cell RNA sequencing data
+"Perfect" example for exploratory data analysis
+
+* High dimensional (hundreds of cells - columns; thousands of genes - rows)
+* Different features (genes) support different groupings (cell types)
+
+Here we work with a dataset from the Teichmann lab. The data includes cells from different conditions and a general approach to understand the structure is to do cluster analysis. 
+
+#Loading the data 
+We convert the `data.frame` into a matrix to assure numeric entries.
+
+```{r, warning=FALSE, message=TRUE, tidy=FALSE}
+input = read.table("https://raw.githubusercontent.com/nilseling/BTM/master/Play_with_data/Data/raw_data.txt", 
+                   sep = "\t", header = TRUE)
+input = as.matrix(input)
+```
+
+#First tasks - understanding the data
+
+* How many genes, how many cells?
+* What could the column names mean?
+* Which distribution can be used to describe gene expression?
+* What does this mean for data visualization?
+
+
+#Understanding the data 2
+
+* How many genes show mean expression < 1? (remove them)
+* How many genes per cell are detected?
+* Find the two different types of genes in the data.
+* Visualize average expression of genes A vs genes B.
+
+#Normalisation
+To compare gene expression across multiple conditions and batches, we adjust the read counts to their relative library size.
+
+```{r, warning=FALSE, message=FALSE, tidy=FALSE}
+library(DESeq2)
+conditions <- sapply(colnames(genes), function(x){unlist(strsplit(x, split = "_"))[3]})
+colData = data.frame(row.names = colnames(genes), conditions = conditions)
+dds = DESeqDataSetFromMatrix(countData = genes, colData = colData, design = ~ 1)
+dds = estimateSizeFactors(dds)
+norm.genes = counts(dds, norm=TRUE)
+```
+
+#Clustering
+
+* Plot a 2D and 3D PCA on the cells (`prcomp` function in R) - color cells based on batch or condition. (you can use `plotrgl()` to get a better look at your plot)
+
+#Final task
+Your collaborator doesn't understand R but needs the prettiest visual representation of the PCA for your joined *Science* publication. The most appealing plot will be rewarded.
+
+Find help at:
+[http://docs.ggplot2.org/current/](http://docs.ggplot2.org/current/)
+
+Example:
+[Nature](http://www.nature.com/ncomms/2016/160112/ncomms9992/images/ncomms9992-f3.jpg)
