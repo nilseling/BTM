@@ -1,0 +1,604 @@
+---
+title: "Visualising Data in R"
+author: "Nils Eling"
+date: "19 October 2016"
+output:
+  slidy_presentation:
+    highlight: pygments
+  html_document:
+    css: custom.css
+    highlight: pygments
+    toc: yes
+  beamer_presentation:
+    highlight: pygments
+    keep_tex: yes
+    latex_engine: xelatex
+    toc: yes
+fontsize: 10pt
+---
+
+#Useful libraries + setting up session
+```{r, warning=FALSE, message=FALSE}
+library(plot3D)
+library(scatterplot3d)
+library(plot3Drgl)
+library(gplots)
+library(pheatmap)
+library(ggplot2)
+library(tidyr)
+library(reshape2)
+library(plyr)
+library(dplyr)
+library(scales)
+```
+
+#Plotting in R
+Toy data
+```{r}
+data(mtcars)
+head(mtcars)
+```
+
+***
+#Plotting in R
+Very simple ways of plotting
+```{r,fig.height=3, fig.width=7}
+plot(mpg~wt, data=mtcars)
+```
+
+```{r,eval=FALSE}
+plot(mtcars$wt, mtcars$mpg)
+```
+
+***
+#Plotting in R
+A large number of plotting packages exist in R. 
+
+* `plot3D`
+* `rgl`
+* `pheatmap`
+* ...
+
+***
+#`plot3D` and `scatterplot3D`
+3 dimensional plotting packages
+
+```{r, tidy=FALSE}
+library(plot3D)
+scatter3D(mtcars$wt, mtcars$hp, mtcars$cyl, 
+          pch=16, colvar=mtcars$qsec, 
+          xlab="Weight", ylab="Horsepower", zlab="Number of cylinders", 
+          clab = "1/4 mile time")
+
+```
+
+***
+
+#`plot3D` and `scatterplot3D`
+3 dimensional plotting packages
+
+```{r, tidy=FALSE, fig.height=5, fig.width=5}
+library(scatterplot3d)
+scatterplot3d(mtcars$wt, mtcars$hp, mtcars$cyl, 
+          pch=16, type="h", 
+          xlab="Weight", ylab="Horsepower", zlab="Number of cylinders")
+
+```
+
+***
+
+#Interactive 3D plotting
+The [`rgl` package](http://rgl.neoscientists.org/about.shtml) connects R base plotting functions and the OpenGL programming interface for 2D/3D vector graphics. 
+
+```{r, tidy=FALSE, eval=FALSE}
+library(plot3Drgl)
+plot3d(mtcars$wt, mtcars$hp, mtcars$cyl)
+```
+
+or
+
+```{r, tidy=FALSE, eval=FALSE}
+scatter3D(mtcars$wt, mtcars$hp, mtcars$cyl, 
+          pch=16, colvar=mtcars$qsec, 
+          xlab="Weight", ylab="Horsepower", zlab="Number of cylinders", 
+          clab = "1/4 mile time")
+plotrgl()
+```
+
+***
+
+#Heatmaps
+We will start with the base R `heatmap` function
+
+```{r, tidy=FALSE}
+data(iris)
+heatmap(as.matrix(iris[,-5]), 
+        RowSideColors = c("blue", "red", "green")[as.factor(iris$Species)], 
+        scale = "col")
+```
+
+***
+
+#Better heatmaps
+The `heatmaps.2` function from the `gplots` package is a fancier version of `heatmap`.
+
+```{r, eval=TRUE, tidy=FALSE, message=FALSE, warning=FALSE}
+library(gplots)
+heatmap.2(as.matrix(iris[,-5]), 
+        RowSideColors = c("blue", "red", "green")[as.factor(iris$Species)], 
+        scale = "col")
+```
+
+
+***
+
+#Pretty heatmaps
+The best heatmap function is `pheatmap`.
+
+```{r, tidy=FALSE}
+library(pheatmap)
+pheatmap(data.frame(iris[,-5], 
+                    row.names = as.character(rownames(iris))), 
+         annotation_row = data.frame(species = iris$Species, 
+                                    row.names = as.character(rownames(iris))), 
+         scale = "column")
+```
+
+***
+
+#Pretty heatmaps
+Easy to adjust different features of the heatmap
+
+```{r, tidy=FALSE}
+pheatmap(data.frame(iris[,-5],
+                    row.names = as.character(rownames(iris))), 
+         color = colorRampPalette(c("dark blue", "white", "dark red"))(100), 
+         cutree_rows = 4, 
+         border_color = NA, cellwidth = 20, cellheight = 2, show_rownames = FALSE,
+         annotation_row = data.frame(species = iris$Species, 
+                                    row.names = as.character(rownames(iris))), 
+         scale = "column")
+```
+
+***
+
+#Introducing `ggplot`
+A short example
+
+```{r, fig.height=2, fig.width=7}
+library(ggplot2)
+ggplot(mtcars) + aes(x=wt, y=mpg) + geom_point()
+```
+```{r, fig.height=3, fig.width=7}
+plot(mpg~wt, data=mtcars)
+```
+
+***
+
+#Introducing `ggplot`
+```{r, fig.height=2, fig.width=7}
+ggplot(mtcars) + aes(x=wt, y=mpg, colour=as.factor(cyl)) + 
+  geom_point()
+```
+```{r, fig.height=3, fig.width=7}
+plot(mpg~wt, 
+     col=palette()[2:4][as.factor(cyl)], 
+     data=mtcars)
+```
+
+***
+#Introducing `ggplot`
+```{r, fig.height=3, fig.width=7}
+plot(mpg~wt, 
+     col=palette()[2:4][as.factor(cyl)], 
+     data=mtcars)
+legend("topright", 
+       legend=levels(as.factor(mtcars$cyl)), 
+       col=palette()[2:4], 
+       pch=1)
+```
+
+***
+
+# Understanding `ggplot`
+A basic [`ggplot`](http://docs.ggplot2.org/current/) graph has three elements:
+
+- Your data
+- A visual representation (a *geometry*)
+- A mapping from your data to its representation (an *aesthetic*)
+
+This allows you to easily experiment with representations:
+```{r, fig.show='hold', fig.width=2.5, fig.height=2, up=3}
+ggplot(mtcars) + aes(x=as.factor(cyl), y=mpg) + geom_point()
+ggplot(mtcars) + aes(x=as.factor(cyl), y=mpg) + geom_boxplot()
+ggplot(mtcars) + aes(x=as.factor(cyl), y=mpg) + geom_violin()
+```
+
+***
+# Understanding `ggplot`
+A basic `ggplot` graph has three elements:
+
+- Your data
+- A visual representation (a *geometry*)
+- A mapping from your data to its representation (an *aesthetic*)
+
+This allows you to easily experiment with representations: 
+```{r, fig.show='hold', fig.width=2.5, fig.height=2, up=3}
+ggplot(mtcars) + aes(x=as.factor(cyl), y=mpg) + geom_boxplot()
+ggplot(mtcars) + aes(x=as.factor(cyl), y=hp) + geom_boxplot()
+ggplot(mtcars) + aes(x=as.factor(cyl), y=wt) + geom_boxplot()
+```
+
+***
+
+# Aesthetics
+x coordinate, y coordinate, colour, shape, size...
+
+```{r, fig.height=4.2}
+ggplot(mtcars) + aes(x=hp, y=mpg, colour=qsec,
+  shape=as.factor(cyl), size=wt) + geom_point()
+```
+
+Each *geometry* interprets a particular list of aesthetics, found in the documentation for the geometry
+
+***
+
+# Exercises
+The following exercises use the `diamonds` dataset. Use `View(diamonds)` in RStudio to get an overview of the data.
+
+```{r, eval=FALSE}
+data(diamonds)
+View(diamonds)
+```
+
+1. Produce a scatter plot of diamond *carat* against *price*.
+2. Produce a histogram of diamond *price*.
+3. Produce a stacked histogram of diamond *price*, where the colour fill of each bar represents *cut*. Consult the `geom_histogram` documentation if you get stuck.
+
+***
+
+# Formatting data for `ggplot`
+## `tidyr`
+Plotting with `ggplot` requires *long* data. Many data sets are provided as *wide* data. 
+```{r, tidy=FALSE}
+weather = read.table("https://raw.githubusercontent.com/nilseling/BTM/master/Plotting/Data/weather.tsv", header=TRUE)
+head(weather)
+```
+
+***
+# Formatting data for `ggplot`
+Each observation should be on its own line to make the data *long*.
+```{r}
+library(tidyr)
+weather.tidy = weather %>% gather(variable, value, 
+                             -year, -month, -station)
+head(weather.tidy)
+```
+
+***
+# Formatting data for `ggplot`
+The same as:
+```{r}
+library(reshape2)
+weather.melt = melt(weather, id.vars = c("year", "month", "station"))
+head(weather.melt)
+```
+
+***
+# Formatting data for `ggplot`
+## `plyr` and `dplyr`
+
+Using the `filter` function from `dplyr`, we can extract particular rows
+```{r, message=F, warning=F}
+library(plyr)
+library(dplyr)
+temps = weather.tidy %>% filter(variable == 'rain')
+```
+
+
+***
+# Formatting data for `ggplot`
+So to plot just the rain data for 2014:
+```{r, fig.width=6, fig.height=3}
+ggplot(weather.tidy %>% filter(variable == 'rain' &
+                          year == 2014)) +
+  aes(x=month, y=value, colour=station) +
+  geom_point() + geom_line()
+```
+
+***
+# Formatting data for `ggplot`
+It is possible to summarise the data using the `ddply` function of `plyr`.
+
+```{r, fig.width=6, fig.height=2.6}
+ggplot(weather.tidy %>% filter(variable == 'rain') 
+               %>% na.omit() 
+               %>% ddply(.(month, station), summarise,
+                         mean=mean(value),
+                         sd=sd(value))) +
+    aes(x=month, y=sd, shape=station, colour=station) +
+    geom_point()
+```
+
+***
+
+# Exercises
+The following exercises use data on abandoned trollies found in the waterways of Bristol, UK. You can load these data with the following command.
+```{r}
+trollies = read.csv("https://raw.githubusercontent.com/nilseling/BTM/master/Plotting/Data/trollies.csv", check.names = F)
+```
+Use `View` or `head` to look at the formatting of the data.
+
+1. Use `tidyr` to produce a long format data frame.
+2. By summarising these data using `ddply`, plot a bar chart of the total number of trolleys discarded in the rivers of Bristol each year.
+
+***
+
+# Facetting
+## `facet_wrap`
+`facet_wrap` enables you to create multiple plots facetted by a single variables.
+```{r, fig.width=8, fig.height=4, message=F, warning=F}
+ggplot(weather.tidy %>% filter(variable == 'rain' & year >= 2000) %>% na.omit()) +
+  aes(x=month, y=value, colour=station) +
+  geom_point() + geom_line() + facet_wrap(~year)
+```
+
+***
+# Facetting
+## `facet_grid`
+`facet_grid` enables you to create multiple plots facetted by two variables.
+```{r, fig.width=9, fig.height=4}
+ggplot(weather.tidy %>% filter(variable == 'tmax' | 
+                          variable == 'tmin')) +
+  aes(x=month, y=year, fill=value) +
+  geom_tile() + scale_fill_gradientn(colours = rev(rainbow(7))) + 
+  facet_grid(station~variable, as.table=T)
+```
+
+***
+
+# Exercises
+The following exercises use the `diamonds` dataset.
+
+1. Use `facet_grid` to plot a histogram for each combination of *color* and *clarity*.
+2. For some clarities, there are fewer diamonds in the dataset. Using `facet_grid`'s documentation, find out how to use a different scale for each clarity.
+
+***
+
+# Publication-ready plots
+## Advanced Geometry
+`ggplot` geometries allow for a large degree of customisation. This allows you to create complex and aesthetically pleasing plots. Let's try and recreate this recent plot from *Nature* [(UK10K Consortium, 2015)](http://www.nature.com/nature/journal/v526/n7571/full/nature14962.html).
+
+<img src="nature1_full.png" alt="Drawing" style="width: 600px;"/>
+
+
+***
+# Publication-ready plots
+The data for this plot were provided by the authors
+```{r}
+nature1 = read.delim("https://raw.githubusercontent.com/nilseling/BTM/master/Plotting/Data/nature1.tsv")
+head(nature1)
+```
+We can do a basic transformations to get the data into 'long' format
+```{r, message=F, warning=F}
+nature1_t = nature1 %>% gather(set, snvs, -AF, -UK10K)
+head(nature1_t)
+```
+
+***
+# Publication-ready plots
+Now let's try and plot it
+```{r, fig.height=3, fig.width=6.6}
+pl = ggplot(nature1_t) + aes(x=AF, y=snvs, fill=set)
+pl + geom_bar(stat='identity')
+```
+
+***
+# Publication-ready plots
+We can overlap the bars using the `position` argument, and to ensure the lowest value bar is plotted on top, we need to order the data first.
+```{r, fig.height=3, fig.width=6.6}
+nature1_t_o = nature1_t[order(nature1_t$AF,nature1_t$snvs, decreasing = TRUE),]
+pl = pl = ggplot(nature1_t_o) + 
+  aes(x=AF, y=snvs, fill=set) + 
+  geom_bar(stat='identity', position='identity')
+pl
+```
+
+***
+# Publication-ready plots
+To plot a horizontal bar chart, we can use `coord_flip`. This works for any kind of plot.
+```{r, fig.height=3, fig.width=6.6}
+pl = pl + coord_flip()
+pl
+```
+
+***
+# Publication-ready plots
+Each bar is labelled with the percentage of SNVs which were not found exclusively in the UK10K data. Let's look at our data again:
+```{r}
+head(nature1_t, 10)
+```
+
+***
+# Publication-ready plots
+`geom_text` will print the data in the `label` aesthetic at the coordinates specified by the `x` and `y` aesthetics.  We only want data printed at the end of the `total_UK10K` bar, and percentage will be $1 - \frac{\text{UK10K}}{\text{total\_UK10K}}$. We can filter out the other lines, and use the filtered data in this geometry using the `data` argument.
+
+```{asis aside=T}
+A geometry can have an aesthetic supplied, and the mappings in this aesthetic only affect this geometry. In this case, the `label` aesthetic is set only on the `geom_text`, whiles the `x` and `y` aesthetics will come from the global aesthetic. Geometries will ignore aesthetics they don't understand. So `geom_text` will simply ignore the `fill` aesthetic.
+```
+
+```{r, fig.height=3, fig.width=6.6}
+nature1_uk10k = nature1_t_o[nature1_t_o$set == 'total_UK10K',]
+pl + geom_text(data=nature1_uk10k, 
+    aes(label=1 - UK10K/snvs))
+```
+
+***
+# Publication-ready plots
+By using the `percent` formatter from the `scales` package, the label can be formatted as a percentage. The `hjust` argument shifts the text to the right of the bar. `size` sets the size of the text.
+```{r, fig.height=3, fig.width=6.6}
+library(scales)
+pl = pl + geom_text(data=nature1_uk10k, 
+    aes(label=percent(1 - UK10K/snvs)), 
+    hjust=-0.1, size=4)
+pl
+```
+
+***
+# Publication-ready plots
+In order to format the horizontal axis as 'millions' we can write our own formatter. Formatters take a single `numeric` argument and return a string.
+```{r}
+millions_formatter = function(x) {
+  as.character(round(x / 1e+06, 1))
+}
+millions_formatter(1500000)
+```
+
+```{r, fig.height=3, fig.width=8}
+pl = pl + scale_y_continuous(labels=millions_formatter)
+pl
+```
+
+
+***
+# Publication-ready plots
+We can specify a custom colour palette, and set the order and labels
+```{r, fig.height=2.5, fig.width=6.6}
+pal = c("#72297A", "#A4D6D2", "#58BBB3", "#22867F")
+pl = pl + 
+  scale_fill_manual(values=pal, 
+      limits=c('total_UK10K', 'UK10K_GoNL', 
+               'UK10K_1000GP', 'UK10K_GoNL_1000GP'),
+      labels=c('UK10K', 'UK10K and GoNL', 'UK10K and 1000GP-EUR', 
+               'UK10K and GoNL and 1000GP-EUR'))
+pl
+```
+
+***
+# Publication-ready plots
+The labels for the bars can also be set manually, and reordered. The axis is still referred to as the x-axis, even though `coord_flip` has made it the vertical axis.
+
+```{r, fig.height=3, fig.width=6.6}
+pl = pl + scale_x_discrete(limits=c("ac1", "ac2", "0.03-0.1", "0.1-1", "1-5", ">5"), 
+  labels=c('AC = 1', 'AC = 2', 'AC > 2 and AF < 0.1%', 
+           '0.1% < AF < 1%', '1% < AF < 5%', '5% < AF < 100%'))
+pl
+```
+
+
+***
+# Publication-ready plots
+## Themes
+
+Themes control various visual aspects of a plot such as grid lines, axes and legends. `ggplot` includes several built-in themes. We can start by applying the minimal theme.
+
+```{r, fig.height=3, fig.width=6.6}
+pl = pl + theme_minimal()
+pl
+```
+
+***
+# Publication-ready plots
+Theme options can be used to move the legend into the plot area. The position is specified with a two element vector. `r{echo=F} c(0, 0)` will cause the legend to be placed in the bottom left, `r{echo=F} c(0, 1)` in the top left, `r{echo=F} c(1, 0)` in the bottom right and `r{echo=F} c(1, 1)` in the top right.
+```{r fig.height=3, fig.width=6.6}
+pl = pl + theme(legend.position=c(1,1), 
+                legend.justification=c(1,1))
+pl
+```
+
+***
+# Publication-ready plots
+We can now see that the plot area doesn't fit the percentage labels. To match the *Nature* plot, we can manually specify the `limits` of the horizontal axis to allow for this. The extra space to the left of the bars can be removed by setting `expand`.
+```{asis aside=T}
+Remember that since we have flipped the axis, the <em>y</em> axis is horizontal.
+```
+
+```{r fig.height=3, fig.width=8, warning=F, message=F}
+pl = pl + scale_y_continuous(labels=millions_formatter, 
+                             expand=c(0, 0), 
+                             limits=c(0, 20e+06)) +
+  ylab("Number of variants (millions)")
+pl
+```
+
+***
+# Publication-ready plots
+The axis ticks can also be removed. As in the *Nature* plot, we can add a line along the *x* axis. For some reason, this requires adding a line to both axes, and then removing the line from the *y* axis.
+```{r fig.height=3, fig.width=6.6}
+pl = pl + theme(axis.line.x = element_line(),
+                axis.ticks.x = element_line(),
+                axis.line.y = element_blank(),
+                axis.ticks.y = element_blank())
+pl
+```
+
+***
+# Publication-ready plots
+The grid lines can be hidden, as can the *y* axis and legend title.
+
+```{r fig.height=3, fig.width=6.6}
+pl = pl + theme(panel.grid=element_blank(),
+                axis.title.y=element_blank(),
+                legend.title=element_blank())
+pl
+```
+
+***
+# Publication-ready plots
+The text size can be set globally.
+```{r fig.height=3, fig.width=6.6}
+pl = pl + theme(text=element_text(size=12))
+pl
+```
+
+***
+# Publication-ready plots
+```{r echo=F, fig.height=3, fig.width=6.6}
+pl
+```
+
+<img src="nature1_full.png" alt="Drawing" style="width: 600px;"/>
+
+***
+# Publication-ready plots
+## Complete Source
+
+```{r, eval=FALSE}
+ggplot(nature1_t_o) + aes(x=AF, y=snvs, fill=set) + 
+  geom_bar(stat='identity',  position='identity') + 
+  coord_flip() +
+  geom_text(data=nature1_uk10k, 
+    aes(label=percent(1 - UK10K/snvs)), 
+    hjust=-0.1, size=4) +
+  scale_y_continuous(labels=millions_formatter, 
+                     expand=c(0, 0), 
+                     limits=c(0, 20e+06)) + 
+  scale_fill_manual(values=pal, 
+      limits=c('total_UK10K', 'UK10K_GoNL', 
+               'UK10K_1000GP', 'UK10K_GoNL_1000GP'),
+      labels=c('UK10K', 'UK10K and GoNL', 'UK10K and 1000GP-EUR', 
+               'UK10K and GoNL and 1000GP-EUR')) +
+  scale_x_discrete(limits=c("ac1", "ac2", "0.03-0.1", "0.1-1", "1-5", ">5"), 
+  labels=c('AC = 1', 'AC = 2', 'AC > 2 and AF < 0.1%', 
+           '0.1% < AF < 1%', '1% < AF < 5%', '5% < AF < 100%')) +
+  theme_minimal() +
+  theme(legend.position=c(1,1), 
+        legend.justification=c(1,1),
+        axis.line.x = element_line(),
+        axis.ticks.x = element_line(),
+        axis.line.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        panel.grid=element_blank(),
+        axis.title.y=element_blank(),
+        legend.title=element_blank(),
+        text=element_text(size=12)) +
+  ylab("Number of variants (millions)")
+
+  
+```
+
+
+
+
+
+
